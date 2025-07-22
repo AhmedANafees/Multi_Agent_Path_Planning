@@ -174,20 +174,14 @@ All output files are timestamped and saved in the `comparison_results/` director
 
 ```
 Multi_Agent_Path_Planning/
-├── README.md                           # This documentation
-├── requirements.txt                    # Python dependencies
-├── .env                               # API key configuration (create this)
-├── .gitignore                         # Git ignore file
-├── create_environment.py              # Environment generation utility
-├── run_search.py                      # Main pathfinding test script
-├── run_partial_robots.py             # Partial knowledge robot implementation
-├── search_algorithms.py              # Core pathfinding algorithms
-├── gemini_api_client.py              # Gemini API integration
-├── gemini_comparison.py              # Comparison for algorithm analysis
+├── create_environment.py             # Environment generation utility
 ├── interpret_environment.py          # Environment file parser
-├── grid_renderer.py                  # Visualization functions
-├── robot.py                          # Robot class implementation
-└── robot_partial_knowledge.py        # Partial knowledge robot variant
+├── search_algorithms.py              # Core pathfinding algorithms
+├── robot_partial_robots.py           # Partial knowledge robot
+├── run_partial_knowledge.py          # Partial knowledge robot implementation
+├── gemini_api_client.py              # Gemini API integration
+├── gemini_comparison.py              # Comparison for algorithm comparison
+└── grid_renderer.py                  # Visualization functions
 ```
 
 ## Expected Performance Benchmarks

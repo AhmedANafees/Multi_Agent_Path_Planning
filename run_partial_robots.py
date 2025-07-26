@@ -5,6 +5,20 @@ import time
 import sys
 sys.stdout = open("multi_robot_log.txt", "w", encoding="utf-8")
 
+
+def broadcast_knowledge(robots):
+    all_shared_data = {}  # {(x, y): symbol}
+
+    # Aggregate all robot knowledge into one broadcast package
+    for robot in robots:
+        robot_data = robot.share_knowledge()
+        all_shared_data.update(robot_data)
+
+    # Broadcast to all robots
+    for robot in robots:
+        robot.receive_knowledge(all_shared_data)
+
+
 def update_all_robot_positions(robots):
     for robot in robots:
         # Clear old robot positions (R)
@@ -18,7 +32,7 @@ def update_all_robot_positions(robots):
             robot.local_map[x][y] = 'R'
 
 
-#Used to help avoid collisions of bots
+# Used to help avoid collisions of bots
 def get_safe_moves(robot, robots):
     next_pos = robot.next_move  # e.g. (x, y)
 
@@ -29,21 +43,23 @@ def get_safe_moves(robot, robots):
         # If other robot is currently on the tile I want
         if other.position == next_pos:
             return False
-        
+
         # If the other robot is ALSO planning to move into the same tile
         if other.next_move == next_pos:
-            # 💡 Let the robot with lower ID go first, others wait
+            # Let the robot with lower ID go first, others wait
             if other.id < robot.id:
                 return False
 
     return True
+
 
 def run_simulation():
     filepath = "robot_room.txt"
     try:
         grid_size, robot_starts, goal_pos, full_map = read_robot_file(filepath)
     except FileNotFoundError:
-        print(f"Error: '{filepath}' not found. Run 'create_environment.py' first.")
+        print(
+            f"Error: '{filepath}' not found. Run 'create_environment.py' first.")
         return
 
     print("--- Environment Loaded ---")
@@ -68,11 +84,14 @@ def run_simulation():
     for robot in robots:
         robot.plan_path()
 
-    # === Run simulation ===
-    for t in range(50):
-        print(f"\n--- Time Step {t} ---")
+    max_steps = 100  # optional safety cap to prevent infinite loops
+    time_step = 0
 
-        # === Phase 1: Used to determine next moves ===
+    while time_step < max_steps:
+        print(f"\n--- Time Step {time_step} ---")
+        time_step += 1
+
+        # === Phase 1: Determine next moves ===
         next_moves = {}
         for robot in robots:
             if robot.path:
@@ -82,7 +101,9 @@ def run_simulation():
                 robot.next_move = None
                 next_moves[robot.id] = None
 
-        # === Phase 2: Used to resolve collisions and move ===
+        # === Phase 2: Move if safe ===
+        any_robot_moved = False
+
         for robot in robots:
             if robot.position == (robot.goal_row, robot.goal_col):
                 continue  # Already at goal
@@ -91,10 +112,10 @@ def run_simulation():
             if move is None:
                 continue
 
-            # Conflict: Handling multiple robots wanting same tile
-            conflicting_ids = [rid for rid, m in next_moves.items() if m == move]
+            conflicting_ids = [rid for rid,
+                               m in next_moves.items() if m == move]
             if len(conflicting_ids) > 1:
-                if robot.id != min(conflicting_ids):  # Only lowest ID gets to move
+                if robot.id != min(conflicting_ids):
                     print(f"[Robot {robot.id}] Waiting for priority robot.")
                     robot.wait_count = getattr(robot, "wait_count", 0) + 1
                     if robot.wait_count >= 2:
@@ -102,13 +123,13 @@ def run_simulation():
                         robot.wait_count = 0
                     continue
 
-           # Conflict: Handling another robot already sitting on the tile
             if any(other.position == move for other in robots if other.id != robot.id):
                 if move == (robot.goal_row, robot.goal_col):
-                    # ✅ Allow multiple robots to enter the goal
-                    print(f"[Robot {robot.id}] Entering goal even though it's occupied.")
+                    print(
+                        f"[Robot {robot.id}] Entering goal even though it's occupied.")
                 else:
-                    print(f"[Robot {robot.id}] Tile occupied by another robot.")
+                    print(
+                        f"[Robot {robot.id}] Tile occupied by another robot.")
                     robot.wait_count = getattr(robot, "wait_count", 0) + 1
                     if robot.wait_count >= 2:
                         robot.replan((robot.goal_row, robot.goal_col))
@@ -118,15 +139,11 @@ def run_simulation():
             # Safe to move
             robot.move()
             robot.wait_count = 0
-            # added to fix the phasing
             robot.plan_path()
+            any_robot_moved = True
 
-        # Share knowledge among all robots
-        for sender in robots:
-            shared_data = sender.share_knowledge()
-            for receiver in robots:
-                if receiver != sender:
-                    receiver.receive_knowledge(shared_data)
+        # Initiate broadcast communication
+        broadcast_knowledge(robots)
 
         # Update robot positions in all maps
         update_all_robot_positions(robots)
@@ -138,7 +155,14 @@ def run_simulation():
             print("\n✅ All robots reached the goal!")
             break
 
-        time.sleep(0.5) # optional pause to simulate time
+        if not any_robot_moved and all(robot.path == [] for robot in robots):
+            print("\n❌ No further progress possible. Robots are stuck or no path exists.")
+            break
+
+        time.sleep(0.5)  # optional pause to simulate time
+
+    if time_step == max_steps:
+        print("Maximum steps used. Simulation terminated ❌.")
 
 
 if __name__ == "__main__":

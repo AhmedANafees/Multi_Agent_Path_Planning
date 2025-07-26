@@ -35,31 +35,4 @@ def read_robot_file(filepath):
     return (grid_rows, grid_cols), robot_positions, goal_position, grid
 
 
-def main():
-    filepath = "robot_room.txt"  # or provide full path
-    grid_size, robot_starts, goal_pos, grid = read_robot_file(filepath)
 
-    print(f"Grid size: {grid_size}")
-    print(f"Goal position: {goal_pos}")
-    print("\nGrid:")
-    for row in grid:
-        print(' '.join(row))
-
-    print("\nRobots:")
-    robots = []
-    for pos in robot_starts:
-        robot = Robot(start_pos=pos, grid_dimensions=grid_size,
-                      goal_pos=goal_pos, grid=grid)
-        robots.append(robot)
-        print(robot)
-
-    robots[0].state()
-    print()
-    print(robots[0].record)
-    robots[0].state()
-    print()
-    print(robots[0].record)
-
-
-if __name__ == "__main__":
-    main()
